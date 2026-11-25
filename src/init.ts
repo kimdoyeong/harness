@@ -39,6 +39,17 @@ export class WriteError extends Error {
   }
 }
 
+// Runs a file-system step on the target and reports any failure against the
+// path being worked on, so the message always names it.
+function onTarget<T>(rel: string, step: () => T): T {
+  try {
+    return step();
+  } catch (error) {
+    if (error instanceof WriteError) throw error;
+    throw new WriteError(rel, error instanceof Error ? error.message : String(error));
+  }
+}
+
 function listFiles(dir: string, prefix = ''): string[] {
   const names = fs.readdirSync(dir).filter((name) => !IGNORED.has(name)).sort();
   const files: string[] = [];
@@ -93,13 +104,11 @@ function assertInsideTarget(realTargetDir: string, rel: string): string {
 }
 
 function write(realTargetDir: string, rel: string, data: string | Buffer): void {
-  const dest = assertInsideTarget(realTargetDir, rel);
-  try {
+  onTarget(rel, () => {
+    const dest = assertInsideTarget(realTargetDir, rel);
     fs.mkdirSync(path.dirname(dest), { recursive: true });
     fs.writeFileSync(dest, data);
-  } catch (error) {
-    throw new WriteError(rel, error instanceof Error ? error.message : String(error));
-  }
+  });
 }
 
 // Always brings the target in line with the source. Files the source does not
@@ -108,7 +117,7 @@ function syncSkill({ realTargetDir, skillSourceDir, results }: Step & { skillSou
   for (const file of listFiles(skillSourceDir)) {
     const rel = `${SKILL_DEST}/${file}`;
     const source = fs.readFileSync(path.join(skillSourceDir, file));
-    const current = readIfExists(path.join(realTargetDir, rel));
+    const current = onTarget(rel, () => readIfExists(path.join(realTargetDir, rel)));
 
     if (current === null) {
       write(realTargetDir, rel, source);
@@ -124,7 +133,7 @@ function syncSkill({ realTargetDir, skillSourceDir, results }: Step & { skillSou
 
 // For files the user edits: written once, then never opened again.
 function createOnce({ realTargetDir, rel, data, results }: Step & { rel: string; data: () => string }): void {
-  if (exists(path.join(realTargetDir, rel))) {
+  if (onTarget(rel, () => exists(path.join(realTargetDir, rel)))) {
     results.push({ path: rel, status: 'skipped', note: EXISTS_NOTE });
     return;
   }
@@ -133,7 +142,7 @@ function createOnce({ realTargetDir, rel, data, results }: Step & { rel: string;
 }
 
 function createDirOnce({ realTargetDir, rel, results }: Step & { rel: string }): void {
-  if (exists(path.join(realTargetDir, rel))) {
+  if (onTarget(`${rel}/`, () => exists(path.join(realTargetDir, rel)))) {
     results.push({ path: `${rel}/`, status: 'skipped', note: EXISTS_NOTE });
     return;
   }
@@ -147,7 +156,7 @@ export function init({ targetDir, skillSourceDir }: InitOptions): InitResult[] {
 
   // Read the form before writing anything, so a broken templates.md leaves
   // the target untouched.
-  const statusMd = exists(path.join(realTargetDir, 'docs/STATUS.md'))
+  const statusMd = onTarget('docs/STATUS.md', () => exists(path.join(realTargetDir, 'docs/STATUS.md')))
     ? null
     : extractStatusTemplate(fs.readFileSync(path.join(skillSourceDir, 'templates.md'), 'utf8'));
 

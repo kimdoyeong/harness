@@ -159,3 +159,42 @@ test('bin: 임시 폴더에서 init을 실행하면 실제 스킬이 설치된�
     fs.readFileSync(path.join(repoRoot, '.claude/skills/ai-sdlc/SKILL.md')),
   );
 });
+
+// Found by the black-box check: these failed with a bare "오류: EISDIR ..."
+// that named no path.
+test('R9: 스킬 파일 자리에 폴더가 있으면 경로와 이유를 쓰고 1로 끝난다', (t) => {
+  const source = fakeSource(t);
+  const target = tmpDir(t, 'target');
+  fs.mkdirSync(path.join(target, '.claude/skills/ai-sdlc/SKILL.md'), { recursive: true });
+
+  const result = runInit(target, source);
+
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /^쓰지 못했습니다: \.claude\/skills\/ai-sdlc\/SKILL\.md \(EISDIR: .+\)\n$/);
+  assert.equal(result.stdout, `harness init: ${target}\n\n`);
+});
+
+test('R9: .claude가 파일이면 경로와 이유를 쓰고 1로 끝난다', (t) => {
+  const source = fakeSource(t);
+  const target = tmpDir(t, 'target');
+  fs.writeFileSync(path.join(target, '.claude'), 'x\n');
+
+  const result = runInit(target, source);
+
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /^쓰지 못했습니다: \.claude\/skills\/ai-sdlc\/SKILL\.md \(ENOTDIR: .+\)\n$/);
+  assert.equal(result.stdout, `harness init: ${target}\n\n`);
+});
+
+test('R9: docs가 파일이면 아무것도 쓰지 않고 경로와 이유를 쓴 뒤 1로 끝난다', (t) => {
+  const source = fakeSource(t);
+  const target = tmpDir(t, 'target');
+  fs.writeFileSync(path.join(target, 'docs'), 'x\n');
+
+  const result = runInit(target, source);
+
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /^쓰지 못했습니다: docs\/STATUS\.md \(ENOTDIR: .+\)\n$/);
+  assert.equal(result.stdout, `harness init: ${target}\n\n`);
+  assert.deepEqual(fs.readdirSync(target), ['docs']);
+});
