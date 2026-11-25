@@ -34,7 +34,7 @@ Claude Code에서 `/ai-sdlc`를 입력하거나, 새 기능을 시작하거나 �
 
 ### 설치 (처음 한 번)
 
-Node 22.18 이상과 pnpm이 필요하다. CLI는 TypeScript를 빌드 없이 실행한다.
+Node 22.18 이상(23.0~23.5 제외)과 pnpm이 필요하다. CLI는 TypeScript를 빌드 없이 실행한다.
 
 ```sh
 git clone https://github.com/kimdoyeong/harness.git

@@ -50,18 +50,35 @@ function onTarget<T>(rel: string, step: () => T): T {
   }
 }
 
+// Regular files only. Symlinks are skipped rather than followed: one that
+// points at a parent folder would never end, and a dangling one cannot be read.
 function listFiles(dir: string, prefix = ''): string[] {
-  const names = fs.readdirSync(dir).filter((name) => !IGNORED.has(name)).sort();
+  const entries = fs
+    .readdirSync(dir, { withFileTypes: true })
+    .filter((entry) => !IGNORED.has(entry.name))
+    .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
   const files: string[] = [];
-  for (const name of names) {
-    const rel = prefix ? `${prefix}/${name}` : name;
-    if (fs.statSync(path.join(dir, name)).isDirectory()) {
-      files.push(...listFiles(path.join(dir, name), rel));
-    } else {
+  for (const entry of entries) {
+    const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) {
+      files.push(...listFiles(path.join(dir, entry.name), rel));
+    } else if (entry.isFile()) {
       files.push(rel);
     }
   }
   return files;
+}
+
+interface SourceFile {
+  file: string;
+  data: Buffer;
+}
+
+function readSkill(skillSourceDir: string): SourceFile[] {
+  return listFiles(skillSourceDir).map((file) => ({
+    file,
+    data: fs.readFileSync(path.join(skillSourceDir, file)),
+  }));
 }
 
 function readIfExists(file: string): Buffer | null {
@@ -80,7 +97,9 @@ function exists(file: string): boolean {
 
 function isInside(parent: string, child: string): boolean {
   const rel = path.relative(parent, child);
-  return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
+  // A name such as "..data" also starts with two dots but is not a parent.
+  const escapes = rel === '..' || rel.startsWith(`..${path.sep}`) || path.isAbsolute(rel);
+  return !escapes;
 }
 
 // Refuses a destination that a symlink inside the target would redirect to
@@ -106,6 +125,11 @@ function assertInsideTarget(realTargetDir: string, rel: string): string {
 function write(realTargetDir: string, rel: string, data: string | Buffer): void {
   onTarget(rel, () => {
     const dest = assertInsideTarget(realTargetDir, rel);
+    // Writing through a link would change whatever it points at, such as a
+    // file that belongs to another skill.
+    if (fs.lstatSync(dest, { throwIfNoEntry: false })?.isSymbolicLink()) {
+      throw new WriteError(rel, '심볼릭 링크라서 덮어쓰지 않습니다');
+    }
     fs.mkdirSync(path.dirname(dest), { recursive: true });
     fs.writeFileSync(dest, data);
   });
@@ -113,10 +137,9 @@ function write(realTargetDir: string, rel: string, data: string | Buffer): void 
 
 // Always brings the target in line with the source. Files the source does not
 // have are never read or removed.
-function syncSkill({ realTargetDir, skillSourceDir, results }: Step & { skillSourceDir: string }): void {
-  for (const file of listFiles(skillSourceDir)) {
+function syncSkill({ realTargetDir, skill, results }: Step & { skill: SourceFile[] }): void {
+  for (const { file, data: source } of skill) {
     const rel = `${SKILL_DEST}/${file}`;
-    const source = fs.readFileSync(path.join(skillSourceDir, file));
     const current = onTarget(rel, () => readIfExists(path.join(realTargetDir, rel)));
 
     if (current === null) {
@@ -154,14 +177,15 @@ export function init({ targetDir, skillSourceDir }: InitOptions): InitResult[] {
   const realTargetDir = fs.realpathSync(targetDir);
   const results: InitResult[] = [];
 
-  // Read the form before writing anything, so a broken templates.md leaves
-  // the target untouched.
+  // Read everything from the source before writing anything, so an unreadable
+  // skill file or a broken templates.md leaves the target untouched.
+  const skill = readSkill(skillSourceDir);
   const statusMd = onTarget('docs/STATUS.md', () => exists(path.join(realTargetDir, 'docs/STATUS.md')))
     ? null
     : extractStatusTemplate(fs.readFileSync(path.join(skillSourceDir, 'templates.md'), 'utf8'));
 
   try {
-    syncSkill({ realTargetDir, skillSourceDir, results });
+    syncSkill({ realTargetDir, skill, results });
     createOnce({ realTargetDir, rel: 'docs/STATUS.md', data: () => statusMd ?? '', results });
     createDirOnce({ realTargetDir, rel: 'docs/specs', results });
     createDirOnce({ realTargetDir, rel: 'docs/archive', results });

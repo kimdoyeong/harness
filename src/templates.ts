@@ -19,8 +19,9 @@ const STATUS_HEADING = '## docs/STATUS.md';
 // The STATUS.md form lives only in the skill's templates.md, so it is read
 // from there instead of being duplicated in this package.
 export function extractStatusTemplate(templatesMd: string): string {
-  const lines = templatesMd.split('\n');
-  const heading = lines.indexOf(STATUS_HEADING);
+  // A checkout with CRLF line endings must give the same form.
+  const lines = templatesMd.split(/\r?\n/);
+  const heading = lines.findIndex((line) => line.trimEnd() === STATUS_HEADING);
   if (heading === -1) {
     throw new Error(`templates.md에서 "${STATUS_HEADING}" 절을 찾지 못했습니다.`);
   }

@@ -205,3 +205,57 @@ test('R7: 끊어진 심볼릭 링크를 타고 밖에 파일을 만들지 않는
   assert.throws(() => init({ targetDir: target, skillSourceDir: source }), WriteError);
   assert.deepEqual(fs.readdirSync(outside), []);
 });
+
+// Found by code review.
+test('대상의 스킬 파일이 다른 스킬을 가리키는 심볼릭 링크면 그 파일을 덮어쓰지 않는다', (t) => {
+  const source = fakeSource(t);
+  const target = tmpDir(t, 'target');
+  fs.mkdirSync(path.join(target, SKILL_DEST), { recursive: true });
+  fs.mkdirSync(path.join(target, '.claude/skills/other'));
+  fs.writeFileSync(path.join(target, '.claude/skills/other/SKILL.md'), 'other\n');
+  fs.symlinkSync('../other/SKILL.md', path.join(target, SKILL_DEST, 'SKILL.md'));
+
+  assert.throws(() => init({ targetDir: target, skillSourceDir: source }), WriteError);
+  assert.equal(fs.readFileSync(path.join(target, '.claude/skills/other/SKILL.md'), 'utf8'), 'other\n');
+});
+
+test('extractStatusTemplate: 줄 끝이 CRLF여도 같은 양식을 돌려준다', () => {
+  const lf = fs.readFileSync(path.join(realSkillDir, 'templates.md'), 'utf8');
+  assert.equal(extractStatusTemplate(lf.replaceAll('\n', '\r\n')), extractStatusTemplate(lf));
+});
+
+test('R7: 이름이 점 두 개로 시작하는 대상 안의 폴더는 밖으로 보지 않는다', (t) => {
+  const source = fakeSource(t);
+  const target = tmpDir(t, 'target');
+  fs.mkdirSync(path.join(target, '..data'));
+  fs.symlinkSync('..data', path.join(target, 'docs'));
+
+  init({ targetDir: target, skillSourceDir: source });
+
+  assert.ok(fs.existsSync(path.join(target, '..data/STATUS.md')));
+});
+
+test('원본을 읽지 못하면 대상에 아무것도 쓰지 않는다', (t) => {
+  if (process.getuid?.() === 0) return t.skip('root는 권한 없는 파일도 읽을 수 있다');
+  const source = fakeSource(t);
+  fs.writeFileSync(path.join(source, 'z.md'), 'z\n');
+  fs.chmodSync(path.join(source, 'z.md'), 0o000);
+  const target = tmpDir(t, 'target');
+
+  assert.throws(() => init({ targetDir: target, skillSourceDir: source }), /EACCES/);
+  assert.deepEqual(fs.readdirSync(target), []);
+});
+
+test('원본 폴더의 심볼릭 링크는 따라가지 않고 건너뛴다', (t) => {
+  const source = fakeSource(t);
+  fs.symlinkSync('.', path.join(source, 'latest'));
+  fs.symlinkSync('missing.md', path.join(source, 'dangling.md'));
+  const target = tmpDir(t, 'target');
+
+  const results = init({ targetDir: target, skillSourceDir: source });
+
+  assert.deepEqual(skillResults(results).map((r) => r.path), [
+    `${SKILL_DEST}/SKILL.md`,
+    `${SKILL_DEST}/templates.md`,
+  ]);
+});
