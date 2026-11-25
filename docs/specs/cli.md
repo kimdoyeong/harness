@@ -15,11 +15,17 @@ Mockup: 없음. 화면이 없는 CLI라서 아래 "화면과 인터페이스"에
 - 실행 방법은 harness 폴더에서 한 번 전역 링크한 뒤 대상 프로젝트에서 `harness init`이다.
 - 스킬은 대상 프로젝트의 `.claude/skills/ai-sdlc/`에만 설치한다. 전역(`~/.claude/skills/`) 설치는 지원하지 않는다.
 - 스킬 덮어쓰기의 범위(우려 사항 1): 원본에 있는 파일만 대상에 넣는다. 이름이 같은 파일은 대상에서 고쳤더라도 묻지 않고 덮어쓰고 출력에 `updated`로 표시한다. 원본에 없는 파일과 다른 스킬 폴더는 건드리지 않으며, 원본에서 지워진 예전 파일도 대상에서 지우지 않는다.
-- 전역 링크(우려 사항 2): 링크는 사용자가 직접 한 번 한다. pnpm의 전역 bin 폴더가 `PATH`에 있어야 하고, 없으면 `pnpm setup`을 실행한다. 설치된 pnpm 12.21.0에서 명령이 정확히 `pnpm link --global`인지는 아직 확인하지 않았다. Build에서 문서와 실제 실행으로 확인하고, 다르면 이 spec의 명령을 고쳐 다시 승인받는다.
+- 전역 링크(우려 사항 2): 링크는 사용자가 직접 한 번 한다. pnpm의 전역 bin 폴더가 `PATH`에 있어야 하고, 없으면 `pnpm setup`을 실행한다. 명령은 `pnpm add --global link:<저장소 경로>`다.
 - `STATUS.md` 뼈대의 원본(우려 사항 3): CLI는 사본을 따로 두지 않는다. 실행할 때 `templates.md`의 `docs/STATUS.md` 코드 블록을 읽어 그대로 쓰고, 그 블록을 찾지 못하면 오류로 끝낸다.
 - `README.md`(우려 사항 4): 링크 절차와 사용법을 적는 일을 이번 범위에 넣는다(R10). `README.md`의 첫 커밋도 `scaffold-cli` 브랜치에서 한다.
-- Node 최소 버전(우려 사항 5): `package.json`의 `engines`를 Node 22 이상으로 둔다.
+- Node 최소 버전(우려 사항 5): `package.json`의 `engines`를 Node 22.18 이상으로 둔다.
 - 영역 이름: 이 spec의 `<spec_name>`은 `cli`다.
+
+2026-11-25 Build 중에 고친 것. 같은 날 사용자가 다시 승인했다.
+
+- 링크 명령을 `pnpm link --global`에서 `pnpm add --global link:<저장소 경로>`로 고쳤다. 이유: pnpm 12.21.0의 `pnpm link`에는 `--global` 옵션이 없다. 바꾼 명령은 실제로 실행해 `harness` 명령이 생기고, 원본 `SKILL.md`를 고친 뒤 다시 설치하지 않아도 `updated`로 반영되는 것을 확인했다.
+- Node 최소 버전을 22에서 22.18로 올렸다. 이유: 사용자 요청으로 CLI를 TypeScript로 쓰고 빌드 없이 실행하는데, Node가 `.ts`를 바로 실행하는 것은 22.18부터다.
+- R1에 `.DS_Store`를 복사하지 않는다는 예외를 더했다. 이유: Finder가 만드는 파일이고 스킬의 일부가 아니다.
 
 ## 현재 상태
 코드에서 확인한 사실(2026-11-25, 브랜치 `scaffold-cli`).
@@ -36,7 +42,7 @@ Mockup: 없음. 화면이 없는 CLI라서 아래 "화면과 인터페이스"에
 
 | ID | 요구사항 | 확인 방법 |
 |---|---|---|
-| R1 | `harness init`은 대상의 `.claude/skills/ai-sdlc/`에 원본의 모든 파일을 같은 내용으로 만든다. | 자동 테스트: 빈 임시 폴더에서 실행한 뒤 원본과 대상의 파일 목록과 해시가 같다. |
+| R1 | `harness init`은 대상의 `.claude/skills/ai-sdlc/`에 원본의 모든 파일을 같은 내용으로 만든다. `.DS_Store`는 복사하지 않는다. | 자동 테스트: 빈 임시 폴더에서 실행한 뒤 원본과 대상의 파일 목록과 해시가 같다. |
 | R2 | `docs/STATUS.md`, `docs/specs/.gitkeep`, `docs/archive/.gitkeep`을 만든다. `docs/specs/`나 `docs/archive/`가 이미 있으면 그 폴더에는 아무것도 만들지 않는다. | 자동 테스트: 빈 폴더에서 세 파일이 생긴다. `docs/specs/a.md`가 있는 폴더에서는 `docs/specs/.gitkeep`이 생기지 않는다. |
 | R3 | `AGENTS.md`를 아래 "화면과 인터페이스"의 내용으로 만든다. | 자동 테스트: 생성된 파일이 기대 내용과 같다. |
 | R4 | 다시 실행하면 스킬 파일은 원본 내용이 되고, `docs/` 아래 파일과 `AGENTS.md`는 바뀌지 않는다. | 자동 테스트: 첫 실행 뒤 대상의 `SKILL.md`, `docs/STATUS.md`, `AGENTS.md`를 고치고 다시 실행한다. `SKILL.md`는 원본 해시로 돌아오고, 나머지 둘은 고친 내용과 수정 시각이 그대로다. |
@@ -54,7 +60,7 @@ Mockup: 없음. 화면이 없는 CLI라서 아래 "화면과 인터페이스"에
 ```
 cd <harness 저장소>
 pnpm install
-pnpm link --global      # Build에서 확인한다(결정 사항: 전역 링크)
+pnpm add --global link:"$PWD"
 ```
 
 ### 빈 프로젝트에서 실행
