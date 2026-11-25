@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
-import { fileURLToPath } from 'node:url';
 import { run } from '../src/cli.js';
+import { capture, fakeSource, repoRoot, tmpDir } from './helpers.js';
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const bin = path.join(repoRoot, 'bin/harness.js');
 
 const HELP = `사용법: harness init
@@ -13,11 +13,6 @@ const HELP = `사용법: harness init
   init    현재 폴더에 ai-sdlc 스킬, docs 뼈대, AGENTS.md를 만든다.
           스킬 파일은 항상 최신으로 덮어쓰고, 이미 있는 docs와 AGENTS.md는 건드리지 않는다.
 `;
-
-export function capture() {
-  const chunks = [];
-  return { write: (s) => chunks.push(s), text: () => chunks.join('') };
-}
 
 function runCli(argv) {
   const stdout = capture();
@@ -66,4 +61,28 @@ test('bin: --help는 0, 모르는 명령은 1', () => {
   const unknown = spawnSync(process.execPath, [bin, 'foo'], { encoding: 'utf8' });
   assert.equal(unknown.status, 1);
   assert.equal(unknown.stderr, '알 수 없는 명령: foo\n사용법: harness init\n');
+});
+
+test('R5: init은 다룬 파일마다 상태를 한 줄씩 출력하고 0으로 끝난다', (t) => {
+  const source = fakeSource(t);
+  const target = tmpDir(t, 'target');
+  const runInit = () => {
+    const stdout = capture();
+    const stderr = capture();
+    const code = run({ argv: ['init'], cwd: target, skillSourceDir: source, stdout, stderr });
+    return { code, stdout: stdout.text(), stderr: stderr.text() };
+  };
+
+  const first = runInit();
+  assert.equal(first.code, 0);
+  assert.equal(first.stderr, '');
+  assert.ok(first.stdout.startsWith(`harness init: ${target}\n\n`));
+  assert.ok(first.stdout.includes('  created    .claude/skills/ai-sdlc/SKILL.md\n'));
+  assert.ok(first.stdout.includes('  created    .claude/skills/ai-sdlc/templates.md\n'));
+
+  fs.writeFileSync(path.join(source, 'SKILL.md'), '# skill v2\n');
+  const second = runInit();
+  assert.equal(second.code, 0);
+  assert.ok(second.stdout.includes('  updated    .claude/skills/ai-sdlc/SKILL.md\n'));
+  assert.ok(second.stdout.includes('  unchanged  .claude/skills/ai-sdlc/templates.md\n'));
 });

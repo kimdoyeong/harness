@@ -12,6 +12,6 @@
   },
   "packageManager": "pnpm@12.21.0",
   "scripts": {
-    "test": "node --test --experimental-test-coverage --test-coverage-include='src/**' --test-coverage-lines=90"
+    "test": "node --test --experimental-test-coverage --test-coverage-include='src/**' --test-coverage-lines=90 'test/*.test.js'"
   }
 }

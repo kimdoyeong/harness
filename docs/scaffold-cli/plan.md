@@ -14,7 +14,7 @@ Author: Doyeong Kim. Status: approved (2026-11-25). Spec: `docs/specs/cli.md` (a
 공통: 의존성 없이 Node 내장 모듈만 쓴다(`node:fs`, `node:path`, `node:util`의 `parseArgs`, `node:test`, `node:assert`). ESM이고 빌드 단계는 없다. 테스트는 모두 `os.tmpdir()` 아래에 만든 임시 폴더에서 돌리고 끝나면 지운다.
 
 ### 1. 패키지 뼈대와 명령 해석 (R9 일부)
-- `package.json`: `"name": "harness"`, `"version": "0.1.0"`, `"private": true`(실수로 게시되지 않게), `"type": "module"`, `"bin": {"harness": "bin/harness.js"}`, `"engines": {"node": ">=22"}`, `"packageManager": "pnpm@12.21.0"`, `"scripts": {"test": "node --test --experimental-test-coverage"}`.
+- `package.json`: `"name": "harness"`, `"version": "0.1.0"`, `"private": true`(실수로 게시되지 않게), `"type": "module"`, `"bin": {"harness": "bin/harness.js"}`, `"engines": {"node": ">=22"}`, `"packageManager": "pnpm@12.21.0"`, `"scripts": {"test": "node --test --experimental-test-coverage --test-coverage-include='src/**' --test-coverage-lines=90 'test/*.test.js'"}`. 커버리지가 90% 아래면 `pnpm test`가 실패한다(구현 중 구체화).
 - `bin/harness.js`: 셔뱅(`#!/usr/bin/env node`)과 실행 권한. `src/cli.js`의 `run()`을 부르고 반환값을 `process.exitCode`에 넣는 일만 한다. 원본 위치는 이 파일의 실제 경로 기준 `../.claude/skills/ai-sdlc`다. Node는 진입 파일의 심볼릭 링크를 실제 경로로 풀기 때문에 링크로 실행해도 저장소를 가리킨다.
 - `src/cli.js`: `run({argv, cwd, skillSourceDir, stdout, stderr})`가 종료 코드를 돌려준다. 인자가 없거나 `--help`면 사용법을 stdout에 쓰고 0. `init`이면 3단계까지는 미구현. 모르는 명령, 모르는 옵션, `init` 뒤의 추가 인자는 "알 수 없는 명령: <입력>"과 사용법을 stderr에 쓰고 1. 문구는 spec의 "사용법과 오류" 그대로다.
 - `.gitignore`에 `node_modules/`를 더한다.
@@ -22,7 +22,7 @@ Author: Doyeong Kim. Status: approved (2026-11-25). Spec: `docs/specs/cli.md` (a
 
 ### 2. init: 스킬 복사 (R1, R4의 스킬 부분, R5, R6, R8)
 - `src/init.js`: `init({targetDir, skillSourceDir})`가 `{path, status, note}` 목록을 돌려준다. 출력은 하지 않는다.
-- 원본 폴더의 파일을 하위 폴더까지 이름순으로 훑는다. 파일마다 원본 바이트를 읽고, 대상에 없으면 쓰고 `created`, 내용이 같으면 쓰지 않고 `unchanged`, 다르면 덮어쓰고 `updated`. 내용이 같으면 쓰지 않으므로 원본과 대상이 같은 폴더여도 안전하다(R8).
+- 원본 폴더의 파일을 하위 폴더까지 이름순으로 훑는다. `.DS_Store`는 스킬의 일부가 아니므로 건너뛴다(구현 중 추가). 파일마다 원본 바이트를 읽고, 대상에 없으면 쓰고 `created`, 내용이 같으면 쓰지 않고 `unchanged`, 다르면 덮어쓰고 `updated`. 내용이 같으면 쓰지 않으므로 원본과 대상이 같은 폴더여도 안전하다(R8).
 - 대상 스킬 폴더의 다른 파일과 다른 스킬 폴더는 읽지도 지우지도 않는다.
 - `src/cli.js`: `init`의 결과를 spec 예시의 형식으로 출력한다. 첫 줄 `harness init: <대상 절대 경로>`, 빈 줄, 상태를 10칸에 맞춘 줄들. `created`가 하나라도 있고 그중에 `AGENTS.md`가 있으면 끝에 "다음: …" 안내를 붙인다.
 - 테스트(`test/init.test.js`): 임시 원본 폴더와 임시 대상 폴더를 만들어 확인한다.
@@ -72,6 +72,7 @@ Author: Doyeong Kim. Status: approved (2026-11-25). Spec: `docs/specs/cli.md` (a
 | `src/init.js` | 새로 만듦 | 2, 3 |
 | `src/templates.js` | 새로 만듦 | 3 |
 | `test/cli.test.js`, `test/init.test.js` | 새로 만듦 | 1, 2, 3 |
+| `test/helpers.js` | 새로 만듦. 두 테스트 파일이 같이 쓰는 임시 폴더, 해시 도구(구현 중 추가) | 2 |
 | `docs/specs/cli.md` | 링크 명령 수정(재승인) | 4 |
 | `README.md` | 설치, 사용, 개발 절. 첫 커밋 | 5 |
 | `pnpm-lock.yaml` | `pnpm install`이 만들면 커밋 | 1 |
