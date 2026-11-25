@@ -60,6 +60,8 @@ Author: Doyeong Kim. Status: approved (2026-11-25). Spec: `docs/specs/cli.md` (a
 - 임시 폴더에서 `harness init`을 실행해 출력을 남긴다. 원본 `SKILL.md`에 한 줄을 더하고 다시 실행해 `updated`가 나오는지 본 뒤 원본을 되돌린다.
 - `docs/specs/cli.md`의 "처음 한 번" 명령과 결정 사항의 전역 링크 항목을 확인한 명령으로 고치고, 바꾼 이유를 한 줄 남겨 다시 승인받는다.
 
+4단계 결과(2026-11-25): 사용자가 `pnpm setup`과 설치 명령을 직접 실행했다. `pnpm add --global link:<저장소 경로>`로 `harness` 명령이 생겼고, pnpm 전역 폴더의 `node_modules/harness`는 저장소를 가리키는 링크라서 `.ts`가 그대로 실행됐다. 임시 폴더에서 첫 실행은 모두 `created`, 원본 `SKILL.md`에 한 줄을 더한 뒤에는 `updated`가 나왔고, 원본은 `git checkout`으로 되돌렸다.
+
 ### 5. README (R10)와 수동 확인 (R11)
 - `README.md`에 "설치" 절(처음 한 번 하는 명령, `pnpm setup` 안내)과 "사용" 절(`harness init`, 만들어지는 파일, 다시 실행했을 때 덮어쓰는 것과 건드리지 않는 것), "개발" 절(`pnpm test`)을 쓴다. `README.md`를 이 브랜치에서 처음 커밋한다.
 - R10: 새 임시 폴더에서 `README.md`의 명령을 그대로 따라 한다.
@@ -97,7 +99,7 @@ Author: Doyeong Kim. Status: approved (2026-11-25). Spec: `docs/specs/cli.md` (a
 운영에 배포하는 것은 없다. 되돌릴 수 없는 변경도 없다.
 
 - 코드: `main`에 머지하기 전이면 브랜치를 버린다. 머지한 뒤면 `git revert -m 1 <머지 커밋>`.
-- 전역 설치: `pnpm remove --global harness`. 4단계에서 확인한 명령에 맞춰 이 줄을 고친다.
+- 전역 설치: `pnpm remove --global harness`.
 - `pnpm setup`이 셸 설정 파일에 더한 줄: 사용자가 그 줄을 지운다.
 - 대상 프로젝트에 만든 파일: `.claude/skills/ai-sdlc/`, `docs/STATUS.md`, `docs/specs/.gitkeep`, `docs/archive/.gitkeep`, `AGENTS.md`를 지운다. 대상이 git 저장소면 `git status`로 새로 생긴 파일을 볼 수 있다.
 
