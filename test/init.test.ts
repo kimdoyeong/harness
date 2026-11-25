@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
-import { init, SKILL_DEST, WriteError } from '../src/init.js';
-import { AGENTS_MD, extractStatusTemplate } from '../src/templates.js';
-import { fakeSource, hashes, realSkillDir, tmpDir } from './helpers.js';
+import { init, SKILL_DEST, WriteError, type InitResult } from '../src/init.ts';
+import { AGENTS_MD, extractStatusTemplate } from '../src/templates.ts';
+import { fakeSource, hashes, realSkillDir, tmpDir } from './helpers.ts';
 
-const skillResults = (results) => results.filter((r) => r.path.startsWith(SKILL_DEST));
+const skillResults = (results: InitResult[]) => results.filter((r) => r.path.startsWith(SKILL_DEST));
 
 test('R1: 빈 대상에 원본의 모든 스킬 파일을 같은 내용으로 만든다', (t) => {
   const source = fakeSource(t);

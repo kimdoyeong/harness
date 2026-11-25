@@ -1,6 +1,18 @@
 import path from 'node:path';
 import { parseArgs } from 'node:util';
-import { init, WriteError } from './init.js';
+import { init, WriteError, type InitResult } from './init.ts';
+
+export interface Output {
+  write(chunk: string): unknown;
+}
+
+export interface RunOptions {
+  argv: string[];
+  cwd: string;
+  skillSourceDir: string;
+  stdout: Output;
+  stderr: Output;
+}
 
 const USAGE_LINE = '사용법: harness init';
 
@@ -13,7 +25,7 @@ const HELP = `${USAGE_LINE}
 const NEXT_STEP =
   '다음: AGENTS.md의 <TODO>에 실제 명령을 적고, Claude Code에서 /ai-sdlc 를 실행하세요.';
 
-function report(targetDir, results) {
+function report(targetDir: string, results: InitResult[]): string {
   const lines = [`harness init: ${targetDir}`, ''];
   for (const { path: file, status, note } of results) {
     lines.push(`  ${status.padEnd(11)}${file}${note ? ` (${note})` : ''}`);
@@ -24,7 +36,7 @@ function report(targetDir, results) {
   return `${lines.join('\n')}\n`;
 }
 
-function parse(argv) {
+function parse(argv: string[]) {
   try {
     return parseArgs({
       args: argv,
@@ -37,7 +49,7 @@ function parse(argv) {
   }
 }
 
-export function run({ argv, cwd, skillSourceDir, stdout, stderr }) {
+export function run({ argv, cwd, skillSourceDir, stdout, stderr }: RunOptions): number {
   const parsed = parse(argv);
 
   if (parsed && (parsed.values.help || parsed.positionals.length === 0)) {
@@ -51,9 +63,13 @@ export function run({ argv, cwd, skillSourceDir, stdout, stderr }) {
       stdout.write(report(targetDir, init({ targetDir, skillSourceDir })));
       return 0;
     } catch (error) {
-      // Show what was already written; it is not rolled back.
-      if (error instanceof WriteError) stdout.write(report(targetDir, error.results));
-      stderr.write(`${error instanceof WriteError ? error.message : `오류: ${error.message}`}\n`);
+      if (error instanceof WriteError) {
+        // Show what was already written; it is not rolled back.
+        stdout.write(report(targetDir, error.results));
+        stderr.write(`${error.message}\n`);
+      } else {
+        stderr.write(`오류: ${error instanceof Error ? error.message : String(error)}\n`);
+      }
       return 1;
     }
   }

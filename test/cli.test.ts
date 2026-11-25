@@ -3,10 +3,10 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
-import { run } from '../src/cli.js';
-import { capture, fakeSource, repoRoot, tmpDir } from './helpers.js';
+import { run } from '../src/cli.ts';
+import { capture, fakeSource, repoRoot, tmpDir } from './helpers.ts';
 
-const bin = path.join(repoRoot, 'bin/harness.js');
+const bin = path.join(repoRoot, 'bin/harness.ts');
 
 const HELP = `사용법: harness init
 
@@ -14,7 +14,7 @@ const HELP = `사용법: harness init
           스킬 파일은 항상 최신으로 덮어쓰고, 이미 있는 docs와 AGENTS.md는 건드리지 않는다.
 `;
 
-function runCli(argv) {
+function runCli(argv: string[]) {
   const stdout = capture();
   const stderr = capture();
   const code = run({ argv, cwd: '/nonexistent', skillSourceDir: '/nonexistent', stdout, stderr });
@@ -63,7 +63,7 @@ test('bin: --help는 0, 모르는 명령은 1', () => {
   assert.equal(unknown.stderr, '알 수 없는 명령: foo\n사용법: harness init\n');
 });
 
-function runInit(target, source) {
+function runInit(target: string, source: string) {
   const stdout = capture();
   const stderr = capture();
   const code = run({ argv: ['init'], cwd: target, skillSourceDir: source, stdout, stderr });

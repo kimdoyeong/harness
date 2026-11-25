@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { run } from '../src/cli.js';
+import { run } from '../src/cli.ts';
 
 // Node resolves the entry file's symlinks, so this points at the repository
 // even when the command is run through a global link.

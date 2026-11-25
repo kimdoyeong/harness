@@ -3,29 +3,32 @@ Author: Doyeong Kim. Status: approved (2026-11-25). Spec: `docs/specs/cli.md` (a
 
 ## 확인이 필요한 우려 사항
 1. **spec의 링크 명령이 틀렸다.** 설치된 pnpm 12.21.0의 `pnpm link --help`에는 `--global` 옵션이 없다. `pnpm add --help`에는 `-g, --global`("Install the package globally, linking its bins into the global bin directory")이 있다. 따라서 spec의 `pnpm link --global`은 그대로 쓸 수 없다. 대신 쓸 명령이 저장소를 복사하는지 심볼릭 링크로 거는지는 실행해 봐야 안다. 복사하면 R6(원본을 고치면 다시 링크하지 않아도 반영)이 깨진다.
-   - 제안: 4단계에서 `pnpm add --global link:<저장소 경로>`를 실행해 두 가지를 확인한다. `harness` 명령이 생기는가, 원본 `SKILL.md`를 고친 뒤 다시 설치하지 않아도 반영되는가. 결과에 맞춰 spec의 "처음 한 번" 명령을 고치고 다시 승인받는다. 둘 중 하나라도 안 되면 구현을 멈추고 대안(`PATH`에 있는 폴더에 `bin/harness.js`의 심볼릭 링크를 직접 만드는 방법 등)을 가져온다.
+   - 제안: 4단계에서 `pnpm add --global link:<저장소 경로>`를 실행해 두 가지를 확인한다. `harness` 명령이 생기는가, 원본 `SKILL.md`를 고친 뒤 다시 설치하지 않아도 반영되는가. 결과에 맞춰 spec의 "처음 한 번" 명령을 고치고 다시 승인받는다. 둘 중 하나라도 안 되면 구현을 멈추고 대안(`PATH`에 있는 폴더에 `bin/harness.ts`의 심볼릭 링크를 직접 만드는 방법 등)을 가져온다.
 2. **사용자가 직접 해야 하는 일이 있고, 4단계는 저장소 밖을 바꾼다.** pnpm 전역 bin 폴더(`/Users/doyeongkim/Library/pnpm/bin`)가 지금 `PATH`에 없다(`pnpm bin --global`이 `ERR_PNPM_GLOBAL_BIN_DIR_NOT_IN_PATH`로 끝난다). `pnpm setup`은 셸 설정 파일을 고치므로 사용자가 직접 실행해야 한다. 또 4단계의 전역 설치는 pnpm 전역 폴더에 파일을 만든다.
    - 제안: 1~3단계는 저장소 안에서만 진행한다. 4단계 직전에 멈추고, 사용자가 `pnpm setup`을 실행한 뒤 전역 설치 명령을 보여주고 따로 승인받는다. 이 계획의 승인은 전역 설치의 승인이 아니다.
 3. **단계마다 브랜치를 나누지 않으려 한다.** 스킬은 구현 단계마다 브랜치를 나누라고 하지만, 이번 변경은 파일 여섯 개 안팎이고 단계가 순서대로 이어진다.
    - 제안: `scaffold-cli` 브랜치 하나에서 단계마다 커밋 하나씩 만든다. 각 커밋에 그 단계의 테스트를 넣는다.
 2026-11-25 사용자 결정: 세 가지 모두 제안대로 한다.
 
+2026-11-25 사용자 요청으로 변경: 3단계까지 JavaScript로 구현한 뒤 "타입스크립트로 짜주세요"라는 요청을 받아 TypeScript로 옮겼다. 빌드 단계는 두지 않는다. Node 22.18부터는 `.ts` 파일을 타입만 지우고 바로 실행하므로(설치된 v22.22.3에서 확인) `bin/harness.ts`를 그대로 실행한다. 그래서 `engines`는 `>=22.18`이 되고, spec의 "Node 22 이상"은 4단계에서 spec을 고칠 때 함께 고쳐 승인받는다. 아래 내용은 이 변경을 반영해 고쳤다.
+
 ## 구현 단계
-공통: 의존성 없이 Node 내장 모듈만 쓴다(`node:fs`, `node:path`, `node:util`의 `parseArgs`, `node:test`, `node:assert`). ESM이고 빌드 단계는 없다. 테스트는 모두 `os.tmpdir()` 아래에 만든 임시 폴더에서 돌리고 끝나면 지운다.
+공통: TypeScript로 쓰고, 실행에는 Node 내장 모듈만 쓴다(`node:fs`, `node:path`, `node:util`의 `parseArgs`, `node:test`, `node:assert`). ESM이고 빌드 단계는 없다. Node가 `.ts`를 바로 실행하므로 import 경로에 `.ts` 확장자를 쓰고, 타입만 지우면 되는 문법만 쓴다(`enum`, 생성자 매개변수 속성 등은 쓰지 않는다. `tsconfig.json`의 `erasableSyntaxOnly`가 막는다). 개발 의존성은 타입 검사용 `typescript`와 `@types/node` 둘뿐이다. 테스트는 모두 `os.tmpdir()` 아래에 만든 임시 폴더에서 돌리고 끝나면 지운다.
 
 ### 1. 패키지 뼈대와 명령 해석 (R9 일부)
-- `package.json`: `"name": "harness"`, `"version": "0.1.0"`, `"private": true`(실수로 게시되지 않게), `"type": "module"`, `"bin": {"harness": "bin/harness.js"}`, `"engines": {"node": ">=22"}`, `"packageManager": "pnpm@12.21.0"`, `"scripts": {"test": "node --test --experimental-test-coverage --test-coverage-include='src/**' --test-coverage-lines=90 'test/*.test.js'"}`. 커버리지가 90% 아래면 `pnpm test`가 실패한다(구현 중 구체화).
-- `bin/harness.js`: 셔뱅(`#!/usr/bin/env node`)과 실행 권한. `src/cli.js`의 `run()`을 부르고 반환값을 `process.exitCode`에 넣는 일만 한다. 원본 위치는 이 파일의 실제 경로 기준 `../.claude/skills/ai-sdlc`다. Node는 진입 파일의 심볼릭 링크를 실제 경로로 풀기 때문에 링크로 실행해도 저장소를 가리킨다.
-- `src/cli.js`: `run({argv, cwd, skillSourceDir, stdout, stderr})`가 종료 코드를 돌려준다. 인자가 없거나 `--help`면 사용법을 stdout에 쓰고 0. `init`이면 3단계까지는 미구현. 모르는 명령, 모르는 옵션, `init` 뒤의 추가 인자는 "알 수 없는 명령: <입력>"과 사용법을 stderr에 쓰고 1. 문구는 spec의 "사용법과 오류" 그대로다.
+- `package.json`: `"name": "harness"`, `"version": "0.1.0"`, `"private": true`(실수로 게시되지 않게), `"type": "module"`, `"bin": {"harness": "bin/harness.ts"}`, `"engines": {"node": ">=22.18"}`, `"packageManager": "pnpm@12.21.0"`, `"scripts": {"typecheck": "tsc", "test": "tsc && node --test --experimental-test-coverage --test-coverage-include='src/**' --test-coverage-lines=90 'test/*.test.ts'"}`. 타입 오류가 있거나 커버리지가 90% 아래면 `pnpm test`가 실패한다(구현 중 구체화).
+- `bin/harness.ts`: 셔뱅(`#!/usr/bin/env node`)과 실행 권한. `src/cli.ts`의 `run()`을 부르고 반환값을 `process.exitCode`에 넣는 일만 한다. 원본 위치는 이 파일의 실제 경로 기준 `../.claude/skills/ai-sdlc`다. Node는 진입 파일의 심볼릭 링크를 실제 경로로 풀기 때문에 링크로 실행해도 저장소를 가리킨다.
+- `src/cli.ts`: `run({argv, cwd, skillSourceDir, stdout, stderr})`가 종료 코드를 돌려준다. 인자가 없거나 `--help`면 사용법을 stdout에 쓰고 0. `init`이면 3단계까지는 미구현. 모르는 명령, 모르는 옵션, `init` 뒤의 추가 인자는 "알 수 없는 명령: <입력>"과 사용법을 stderr에 쓰고 1. 문구는 spec의 "사용법과 오류" 그대로다.
+- `tsconfig.json`: `strict`, `noEmit`, `module: nodenext`, `allowImportingTsExtensions`, `erasableSyntaxOnly`, `verbatimModuleSyntax`. 대상은 `bin`, `src`, `test`.
 - `.gitignore`에 `node_modules/`를 더한다.
-- 테스트(`test/cli.test.js`): `run()`을 직접 불러 인자 없음, `--help`, `foo`, `init --foo`, `init extra`의 출력과 종료 코드를 확인한다. `bin/harness.js`를 자식 프로세스로 실행해 `--help`가 0, `foo`가 1로 끝나는지 확인한다.
+- 테스트(`test/cli.test.ts`): `run()`을 직접 불러 인자 없음, `--help`, `foo`, `init --foo`, `init extra`의 출력과 종료 코드를 확인한다. `bin/harness.ts`를 자식 프로세스로 실행해 `--help`가 0, `foo`가 1로 끝나는지 확인한다.
 
 ### 2. init: 스킬 복사 (R1, R4의 스킬 부분, R5, R6, R8)
-- `src/init.js`: `init({targetDir, skillSourceDir})`가 `{path, status, note}` 목록을 돌려준다. 출력은 하지 않는다.
+- `src/init.ts`: `init({targetDir, skillSourceDir})`가 `{path, status, note}` 목록을 돌려준다. 출력은 하지 않는다.
 - 원본 폴더의 파일을 하위 폴더까지 이름순으로 훑는다. `.DS_Store`는 스킬의 일부가 아니므로 건너뛴다(구현 중 추가). 파일마다 원본 바이트를 읽고, 대상에 없으면 쓰고 `created`, 내용이 같으면 쓰지 않고 `unchanged`, 다르면 덮어쓰고 `updated`. 내용이 같으면 쓰지 않으므로 원본과 대상이 같은 폴더여도 안전하다(R8).
 - 대상 스킬 폴더의 다른 파일과 다른 스킬 폴더는 읽지도 지우지도 않는다.
-- `src/cli.js`: `init`의 결과를 spec 예시의 형식으로 출력한다. 첫 줄 `harness init: <대상 절대 경로>`, 빈 줄, 상태를 10칸에 맞춘 줄들. `created`가 하나라도 있고 그중에 `AGENTS.md`가 있으면 끝에 "다음: …" 안내를 붙인다.
-- 테스트(`test/init.test.js`): 임시 원본 폴더와 임시 대상 폴더를 만들어 확인한다.
+- `src/cli.ts`: `init`의 결과를 spec 예시의 형식으로 출력한다. 첫 줄 `harness init: <대상 절대 경로>`, 빈 줄, 상태를 10칸에 맞춘 줄들. `created`가 하나라도 있고 그중에 `AGENTS.md`가 있으면 끝에 "다음: …" 안내를 붙인다.
+- 테스트(`test/init.test.ts`): 임시 원본 폴더와 임시 대상 폴더를 만들어 확인한다.
   - 빈 대상: 원본과 대상의 파일 목록과 SHA-256이 같다(R1). 실제 저장소의 `.claude/skills/ai-sdlc/`를 원본으로 한 번 더 확인한다.
   - 대상의 `SKILL.md`를 고치고 다시 실행: 원본 해시로 돌아오고 상태가 `updated`다(R4).
   - 원본 파일을 고치고 다시 실행: 대상이 바뀐다(R6).
@@ -33,10 +36,10 @@ Author: Doyeong Kim. Status: approved (2026-11-25). Spec: `docs/specs/cli.md` (a
   - 원본과 대상이 같은 폴더: 모두 `unchanged`이고 해시가 그대로다(R8).
 
 ### 3. init: docs 뼈대, AGENTS.md, 안전장치 (R2, R3, R4, R5, R7, R9의 쓰기 실패)
-- `src/templates.js`:
+- `src/templates.ts`:
   - `extractStatusTemplate(templatesMd)`: `## docs/STATUS.md` 줄을 찾고, 그 뒤 첫 ` ``` ` 줄과 다음 ` ``` ` 줄 사이를 돌려준다(끝에 줄바꿈 하나). 제목 줄이나 코드 블록이 없으면 오류를 던진다. 입력은 원본의 `templates.md`다.
   - `AGENTS_MD`: spec의 "생성되는 `AGENTS.md`" 내용 그대로인 문자열.
-- `src/init.js`에 스킬 복사 다음 순서로 더한다.
+- `src/init.ts`에 스킬 복사 다음 순서로 더한다.
   - `docs/STATUS.md`: 없으면 만들고 `created`, 있으면 `skipped`와 "이미 있음".
   - `docs/specs/`, `docs/archive/`: 폴더가 없으면 만들고 그 안에 빈 `.gitkeep`을 써서 `created docs/specs/.gitkeep`. 폴더가 있으면 아무것도 하지 않고 `skipped docs/specs/`와 "이미 있음".
   - `AGENTS.md`: `docs/STATUS.md`와 같은 규칙.
@@ -67,14 +70,15 @@ Author: Doyeong Kim. Status: approved (2026-11-25). Spec: `docs/specs/cli.md` (a
 |---|---|---|
 | `package.json` | 새로 만듦 | 1 |
 | `.gitignore` | `node_modules/` 추가 | 1 |
-| `bin/harness.js` | 새로 만듦 | 1 |
-| `src/cli.js` | 새로 만듦 | 1, 2, 3 |
-| `src/init.js` | 새로 만듦 | 2, 3 |
-| `src/templates.js` | 새로 만듦 | 3 |
-| `test/cli.test.js`, `test/init.test.js` | 새로 만듦 | 1, 2, 3 |
-| `test/helpers.js` | 새로 만듦. 두 테스트 파일이 같이 쓰는 임시 폴더, 해시 도구(구현 중 추가) | 2 |
+| `bin/harness.ts` | 새로 만듦 | 1 |
+| `src/cli.ts` | 새로 만듦 | 1, 2, 3 |
+| `src/init.ts` | 새로 만듦 | 2, 3 |
+| `src/templates.ts` | 새로 만듦 | 3 |
+| `test/cli.test.ts`, `test/init.test.ts` | 새로 만듦 | 1, 2, 3 |
+| `test/helpers.ts` | 새로 만듦. 두 테스트 파일이 같이 쓰는 임시 폴더, 해시 도구(구현 중 추가) | 2 |
 | `docs/specs/cli.md` | 링크 명령 수정(재승인) | 4 |
 | `README.md` | 설치, 사용, 개발 절. 첫 커밋 | 5 |
+| `tsconfig.json` | 새로 만듦 | TypeScript 전환 |
 | `pnpm-lock.yaml` | `pnpm install`이 만들면 커밋 | 1 |
 
 `.claude/skills/ai-sdlc/`의 파일은 고치지 않는다.
@@ -86,7 +90,8 @@ Author: Doyeong Kim. Status: approved (2026-11-25). Spec: `docs/specs/cli.md` (a
 - **중간에 실패하면 일부만 만들어진다:** 되돌리지 않는다. 다시 실행하면 남은 것만 만들어지므로 그대로 둔다.
 - **`chmod 555` 테스트는 root로 돌리면 통과하지 못한다:** 쓰기가 성공하기 때문이다. root면 그 테스트를 건너뛴다.
 - **버린 대안, 인자 해석 라이브러리(commander 등):** 명령이 `init` 하나라서 `parseArgs`로 충분하다. 의존성이 없으면 설치와 링크가 단순해지고 네트워크를 쓰는 코드가 없다는 R7의 검토도 쉬워진다.
-- **버린 대안, TypeScript:** 빌드 단계가 생기면 "원본을 고치면 바로 반영"에 빌드가 끼어든다.
+- **빌드 없는 TypeScript는 Node 22.18 이상에서만 돈다:** 더 낮은 Node에서는 `.ts`를 실행하지 못한다. `engines`에 적고 README에 쓴다. 또 Node는 `node_modules` 아래의 `.ts`는 실행하지 않으므로, 전역 설치가 저장소를 복사하면 명령 자체가 돌지 않는다. 링크면 실제 경로가 저장소라서 괜찮다. 4단계에서 함께 확인한다.
+- **버린 대안, `tsc`로 `dist/`에 빌드:** CLI 코드를 고칠 때마다 빌드해야 하고, 빌드를 잊으면 예전 코드가 돈다.
 
 ## 되돌리는 방법
 운영에 배포하는 것은 없다. 되돌릴 수 없는 변경도 없다.

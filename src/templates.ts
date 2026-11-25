@@ -18,7 +18,7 @@ const STATUS_HEADING = '## docs/STATUS.md';
 
 // The STATUS.md form lives only in the skill's templates.md, so it is read
 // from there instead of being duplicated in this package.
-export function extractStatusTemplate(templatesMd) {
+export function extractStatusTemplate(templatesMd: string): string {
   const lines = templatesMd.split('\n');
   const heading = lines.indexOf(STATUS_HEADING);
   if (heading === -1) {
