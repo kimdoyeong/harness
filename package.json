@@ -1,0 +1,17 @@
+{
+  "name": "harness",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ai-sdlc 스킬, docs 뼈대, AGENTS.md를 프로젝트에 만들어 주는 CLI",
+  "type": "module",
+  "bin": {
+    "harness": "bin/harness.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@12.21.0",
+  "scripts": {
+    "test": "node --test --experimental-test-coverage --test-coverage-include='src/**' --test-coverage-lines=90"
+  }
+}
