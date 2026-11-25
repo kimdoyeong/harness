@@ -28,8 +28,10 @@ Author: <이름 (역할)>. Status: draft.
 
 ## docs/specs/<spec_name>.md
 
+`<spec_name>`은 영역 이름이다(예: `backend`, `frontend`, `scalability`). 이미 있는 영역 spec을 고칠 때는 둘째 줄의 `Status`와 `Intent`를 이번 주기 것으로 바꾸고, 요구사항과 결정 사항은 지우지 않고 이어서 적는다.
+
 ```
-# Spec: <이름>
+# Spec: <영역 이름>
 Author: <이름>. Status: draft. Intent: `docs/<branch_name>/intent.md` (approved <날짜>).
 Mockup: <링크 또는 "없음">
 
