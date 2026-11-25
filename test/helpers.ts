@@ -17,7 +17,6 @@ export function tmpDir(t: TestContext, name: string): string {
   return dir;
 }
 
-// A stand-in for the repository's skill folder, so tests can edit the source.
 export function fakeSource(t: TestContext): string {
   const dir = tmpDir(t, 'source');
   fs.writeFileSync(path.join(dir, 'SKILL.md'), '# skill v1\n');

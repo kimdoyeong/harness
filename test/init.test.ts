@@ -206,7 +206,6 @@ test('R7: 끊어진 심볼릭 링크를 타고 밖에 파일을 만들지 않는
   assert.deepEqual(fs.readdirSync(outside), []);
 });
 
-// Found by code review.
 test('대상의 스킬 파일이 다른 스킬을 가리키는 심볼릭 링크면 그 파일을 덮어쓰지 않는다', (t) => {
   const source = fakeSource(t);
   const target = tmpDir(t, 'target');

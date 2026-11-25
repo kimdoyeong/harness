@@ -12,6 +12,8 @@ Author: Doyeong Kim. Status: approved (2026-11-25). Spec: `docs/specs/cli.md` (a
 
 2026-11-25 사용자 요청으로 변경: 3단계까지 JavaScript로 구현한 뒤 "타입스크립트로 짜주세요"라는 요청을 받아 TypeScript로 옮겼다. 빌드 단계는 두지 않는다. Node 22.18부터는 `.ts` 파일을 타입만 지우고 바로 실행하므로(설치된 v22.22.3에서 확인) `bin/harness.ts`를 그대로 실행한다. 그래서 `engines`는 `>=22.18`이 되고, spec의 "Node 22 이상"은 4단계에서 spec을 고칠 때 함께 고쳐 승인받는다. 아래 내용은 이 변경을 반영해 고쳤다.
 
+2026-11-25 사용자 요청으로 추가: "린트 설정하고 주석 금지 룰 붙여봐". ESLint(`eslint.config.js`, `typescript-eslint` 권장 규칙)를 더하고, 모든 주석을 오류로 잡는 `local/no-comments` 규칙을 설정 파일 안에 만들었다. 셔뱅은 예외다. 기존 코드의 주석은 모두 지웠다. `pnpm test`가 린트도 함께 돌린다. `typescript-eslint` 8.74가 TypeScript 7을 지원하지 않아 `typescript`를 6.0으로 낮췄다.
+
 ## 구현 단계
 공통: TypeScript로 쓰고, 실행에는 Node 내장 모듈만 쓴다(`node:fs`, `node:path`, `node:util`의 `parseArgs`, `node:test`, `node:assert`). ESM이고 빌드 단계는 없다. Node가 `.ts`를 바로 실행하므로 import 경로에 `.ts` 확장자를 쓰고, 타입만 지우면 되는 문법만 쓴다(`enum`, 생성자 매개변수 속성 등은 쓰지 않는다. `tsconfig.json`의 `erasableSyntaxOnly`가 막는다). 개발 의존성은 타입 검사용 `typescript`와 `@types/node` 둘뿐이다. 테스트는 모두 `os.tmpdir()` 아래에 만든 임시 폴더에서 돌리고 끝나면 지운다.
 

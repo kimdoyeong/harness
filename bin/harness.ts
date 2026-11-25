@@ -3,8 +3,6 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { run } from '../src/cli.ts';
 
-// Node resolves the entry file's symlinks, so this points at the repository
-// even when the command is run through a global link.
 const here = path.dirname(fileURLToPath(import.meta.url));
 const skillSourceDir = path.resolve(here, '../.claude/skills/ai-sdlc');
 

@@ -83,8 +83,11 @@ harness init: /Users/me/some-project
 ### 개발
 
 ```sh
-pnpm test        # 타입 검사와 테스트. src/ 줄 커버리지가 90% 아래면 실패한다
+pnpm test        # 타입 검사, 린트, 테스트. src/ 줄 커버리지가 90% 아래면 실패한다
 pnpm typecheck   # 타입 검사만
+pnpm lint        # 린트만
 ```
+
+코드에 주석을 쓰지 않는다. ESLint의 `local/no-comments` 규칙(`eslint.config.js`)이 `bin/harness.ts`의 셔뱅을 뺀 모든 주석을 오류로 잡는다.
 
 요구사항은 [`docs/specs/cli.md`](docs/specs/cli.md)에 있다.

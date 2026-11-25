@@ -64,7 +64,6 @@ export function run({ argv, cwd, skillSourceDir, stdout, stderr }: RunOptions): 
       return 0;
     } catch (error) {
       if (error instanceof WriteError) {
-        // Show what was already written; it is not rolled back.
         stdout.write(report(targetDir, error.results));
         stderr.write(`${error.message}\n`);
       } else {

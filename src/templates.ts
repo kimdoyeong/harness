@@ -16,10 +16,7 @@ export const AGENTS_MD = `# AGENTS.md
 
 const STATUS_HEADING = '## docs/STATUS.md';
 
-// The STATUS.md form lives only in the skill's templates.md, so it is read
-// from there instead of being duplicated in this package.
 export function extractStatusTemplate(templatesMd: string): string {
-  // A checkout with CRLF line endings must give the same form.
   const lines = templatesMd.split(/\r?\n/);
   const heading = lines.findIndex((line) => line.trimEnd() === STATUS_HEADING);
   if (heading === -1) {
@@ -28,8 +25,6 @@ export function extractStatusTemplate(templatesMd: string): string {
 
   let open = -1;
   for (let i = heading + 1; i < lines.length; i += 1) {
-    // The form itself has "## " headings, so only a heading before the block
-    // opens means the section ended without one.
     if (open === -1 && lines[i].startsWith('## ')) break;
     if (!lines[i].startsWith('```')) continue;
     if (open === -1) {

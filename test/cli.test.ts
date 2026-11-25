@@ -160,8 +160,6 @@ test('bin: 임시 폴더에서 init을 실행하면 실제 스킬이 설치된�
   );
 });
 
-// Found by the black-box check: these failed with a bare "오류: EISDIR ..."
-// that named no path.
 test('R9: 스킬 파일 자리에 폴더가 있으면 경로와 이유를 쓰고 1로 끝난다', (t) => {
   const source = fakeSource(t);
   const target = tmpDir(t, 'target');
