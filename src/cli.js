@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { parseArgs } from 'node:util';
-import { init } from './init.js';
+import { init, WriteError } from './init.js';
 
 const USAGE_LINE = '사용법: harness init';
 
@@ -47,9 +47,15 @@ export function run({ argv, cwd, skillSourceDir, stdout, stderr }) {
 
   if (parsed && parsed.positionals.length === 1 && parsed.positionals[0] === 'init') {
     const targetDir = path.resolve(cwd);
-    const results = init({ targetDir, skillSourceDir });
-    stdout.write(report(targetDir, results));
-    return 0;
+    try {
+      stdout.write(report(targetDir, init({ targetDir, skillSourceDir })));
+      return 0;
+    } catch (error) {
+      // Show what was already written; it is not rolled back.
+      if (error instanceof WriteError) stdout.write(report(targetDir, error.results));
+      stderr.write(`${error instanceof WriteError ? error.message : `오류: ${error.message}`}\n`);
+      return 1;
+    }
   }
 
   stderr.write(`알 수 없는 명령: ${argv.join(' ')}\n${USAGE_LINE}\n`);

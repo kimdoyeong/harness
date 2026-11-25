@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
-import { init, SKILL_DEST } from '../src/init.js';
+import { init, SKILL_DEST, WriteError } from '../src/init.js';
+import { AGENTS_MD, extractStatusTemplate } from '../src/templates.js';
 import { fakeSource, hashes, realSkillDir, tmpDir } from './helpers.js';
 
 const skillResults = (results) => results.filter((r) => r.path.startsWith(SKILL_DEST));
@@ -86,4 +87,121 @@ test('R8: 원본과 대상이 같은 폴더면 unchanged이고 내용이 그대�
 
   assert.deepEqual(hashes(source), before);
   assert.deepEqual(skillResults(results).map((r) => r.status), ['unchanged', 'unchanged']);
+});
+
+const realStatusTemplate = () =>
+  extractStatusTemplate(fs.readFileSync(path.join(realSkillDir, 'templates.md'), 'utf8'));
+
+test('R2, R3: 빈 대상에 docs 뼈대와 AGENTS.md를 만든다', (t) => {
+  const source = fakeSource(t);
+  const target = tmpDir(t, 'target');
+
+  const results = init({ targetDir: target, skillSourceDir: source });
+
+  assert.equal(fs.readFileSync(path.join(target, 'docs/STATUS.md'), 'utf8'), realStatusTemplate());
+  assert.equal(fs.readFileSync(path.join(target, 'docs/specs/.gitkeep'), 'utf8'), '');
+  assert.equal(fs.readFileSync(path.join(target, 'docs/archive/.gitkeep'), 'utf8'), '');
+  assert.equal(fs.readFileSync(path.join(target, 'AGENTS.md'), 'utf8'), AGENTS_MD);
+  assert.deepEqual(results.slice(2), [
+    { path: 'docs/STATUS.md', status: 'created' },
+    { path: 'docs/specs/.gitkeep', status: 'created' },
+    { path: 'docs/archive/.gitkeep', status: 'created' },
+    { path: 'AGENTS.md', status: 'created' },
+  ]);
+});
+
+test('R3: AGENTS.md의 내용은 spec에 적힌 그대로다', () => {
+  const spec = fs.readFileSync(path.join(realSkillDir, '../../../docs/specs/cli.md'), 'utf8');
+  const section = spec.slice(spec.indexOf('### 생성되는 `AGENTS.md`'));
+  const block = section.split('```')[1].replace(/^\n/, '');
+  assert.equal(AGENTS_MD, block);
+});
+
+test('STATUS 양식은 templates.md의 코드 블록 그대로다', () => {
+  const status = realStatusTemplate();
+  assert.ok(status.startsWith('# Status\n'));
+  assert.ok(status.includes('## 알려진 문제\n'));
+  assert.ok(status.endsWith('테스트가 처음에 통과했는지.\n'));
+  assert.ok(!status.includes('```'));
+});
+
+test('extractStatusTemplate: 제목이나 코드 블록이 없으면 오류', () => {
+  assert.throws(() => extractStatusTemplate('# 양식\n'), /절을 찾지 못했습니다/);
+  assert.throws(() => extractStatusTemplate('## docs/STATUS.md\n\n글만 있음\n'), /코드 블록을 찾지 못했습니다/);
+  assert.throws(
+    () => extractStatusTemplate('## docs/STATUS.md\n\n## 다음 절\n```\nx\n```\n'),
+    /코드 블록을 찾지 못했습니다/,
+  );
+});
+
+test('R2: docs/specs가 이미 있으면 그 안에 아무것도 만들지 않는다', (t) => {
+  const source = fakeSource(t);
+  const target = tmpDir(t, 'target');
+  fs.mkdirSync(path.join(target, 'docs/specs'), { recursive: true });
+  fs.writeFileSync(path.join(target, 'docs/specs/a.md'), 'a\n');
+
+  const results = init({ targetDir: target, skillSourceDir: source });
+
+  assert.deepEqual(fs.readdirSync(path.join(target, 'docs/specs')), ['a.md']);
+  assert.ok(fs.existsSync(path.join(target, 'docs/archive/.gitkeep')));
+  assert.deepEqual(results.find((r) => r.path === 'docs/specs/'), {
+    path: 'docs/specs/',
+    status: 'skipped',
+    note: '이미 있음',
+  });
+});
+
+test('R4: 다시 실행해도 docs와 AGENTS.md는 내용과 수정 시각이 그대로다', (t) => {
+  const source = fakeSource(t);
+  const target = tmpDir(t, 'target');
+  init({ targetDir: target, skillSourceDir: source });
+  const kept = ['docs/STATUS.md', 'AGENTS.md', 'docs/specs/.gitkeep', 'docs/archive/.gitkeep'];
+  fs.writeFileSync(path.join(target, 'docs/STATUS.md'), 'my status\n');
+  fs.writeFileSync(path.join(target, 'AGENTS.md'), 'my agents\n');
+  const snapshot = () =>
+    kept.map((rel) => {
+      const file = path.join(target, rel);
+      return [rel, fs.readFileSync(file, 'utf8'), fs.statSync(file).mtimeMs];
+    });
+  const before = snapshot();
+
+  const results = init({ targetDir: target, skillSourceDir: source });
+
+  assert.deepEqual(snapshot(), before);
+  assert.deepEqual(
+    results.slice(2).map((r) => r.status),
+    ['skipped', 'skipped', 'skipped', 'skipped'],
+  );
+});
+
+test('R7: 결과의 모든 경로가 대상 폴더 아래다', (t) => {
+  const source = fakeSource(t);
+  const target = tmpDir(t, 'target');
+
+  const results = init({ targetDir: target, skillSourceDir: source });
+
+  for (const { path: rel } of results) {
+    assert.ok(!path.relative(target, path.resolve(target, rel)).startsWith('..'), rel);
+  }
+});
+
+test('R7: 대상 안의 심볼릭 링크가 밖을 가리키면 쓰지 않는다', (t) => {
+  const source = fakeSource(t);
+  const outside = tmpDir(t, 'outside');
+  const target = tmpDir(t, 'target');
+  fs.symlinkSync(outside, path.join(target, '.claude'));
+
+  assert.throws(() => init({ targetDir: target, skillSourceDir: source }), WriteError);
+  assert.deepEqual(fs.readdirSync(outside), []);
+});
+
+test('R7: 끊어진 심볼릭 링크를 타고 밖에 파일을 만들지 않는다', (t) => {
+  const source = fakeSource(t);
+  const outside = tmpDir(t, 'outside');
+  const target = tmpDir(t, 'target');
+  fs.mkdirSync(path.join(target, SKILL_DEST), { recursive: true });
+  fs.symlinkSync(path.join(outside, 'planted.md'), path.join(target, SKILL_DEST, 'SKILL.md'));
+
+  assert.throws(() => init({ targetDir: target, skillSourceDir: source }), WriteError);
+  assert.deepEqual(fs.readdirSync(outside), []);
 });
