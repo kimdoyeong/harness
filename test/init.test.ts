@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
-import { init, SKILL_DEST, WriteError, type InitResult } from '../src/init.ts';
+import { CODEX_SKILL_DEST, init, SKILL_DEST, WriteError, type InitResult } from '../src/init.ts';
 import { AGENTS_MD, extractStatusTemplate } from '../src/templates.ts';
-import { fakeSource, hashes, realSkillDir, tmpDir } from './helpers.ts';
+import { fakeSource, hashes, realSkillDir, repoRoot, tmpDir } from './helpers.ts';
 
 const skillResults = (results: InitResult[]) => results.filter((r) => r.path.startsWith(SKILL_DEST));
 
@@ -22,6 +22,35 @@ test('R1: 빈 대상에 원본의 모든 스킬 파일을 같은 내용으로 �
     { path: `${SKILL_DEST}/nested/extra.md`, status: 'created' },
     { path: `${SKILL_DEST}/templates.md`, status: 'created' },
   ]);
+});
+
+test('R1: Codex용 .agents/skills에도 같은 파일을 만든다', (t) => {
+  const source = fakeSource(t);
+  const target = tmpDir(t, 'target');
+
+  const results = init({ targetDir: target, skillSourceDir: source });
+
+  assert.deepEqual(hashes(path.join(target, CODEX_SKILL_DEST)), hashes(source));
+  assert.deepEqual(results.slice(2, 4), [
+    { path: `${CODEX_SKILL_DEST}/SKILL.md`, status: 'created' },
+    { path: `${CODEX_SKILL_DEST}/templates.md`, status: 'created' },
+  ]);
+});
+
+test('R4: 대상에서 고친 Codex용 스킬 파일도 원본 내용으로 돌아온다', (t) => {
+  const source = fakeSource(t);
+  const target = tmpDir(t, 'target');
+  init({ targetDir: target, skillSourceDir: source });
+  fs.writeFileSync(path.join(target, CODEX_SKILL_DEST, 'SKILL.md'), 'local edit\n');
+
+  const results = init({ targetDir: target, skillSourceDir: source });
+
+  assert.deepEqual(hashes(path.join(target, CODEX_SKILL_DEST)), hashes(source));
+  assert.deepEqual(results.slice(0, 4).map((r) => r.status), ['unchanged', 'unchanged', 'updated', 'unchanged']);
+});
+
+test('R12: 이 저장소의 Claude용 스킬과 Codex용 스킬은 내용이 같다', () => {
+  assert.deepEqual(hashes(path.join(repoRoot, CODEX_SKILL_DEST)), hashes(realSkillDir));
 });
 
 test('R1: 실제 저장소의 스킬 폴더를 원본으로 써도 같다', (t) => {
@@ -102,7 +131,7 @@ test('R2, R3: 빈 대상에 docs 뼈대와 AGENTS.md를 만든다', (t) => {
   assert.equal(fs.readFileSync(path.join(target, 'docs/specs/.gitkeep'), 'utf8'), '');
   assert.equal(fs.readFileSync(path.join(target, 'docs/archive/.gitkeep'), 'utf8'), '');
   assert.equal(fs.readFileSync(path.join(target, 'AGENTS.md'), 'utf8'), AGENTS_MD);
-  assert.deepEqual(results.slice(2), [
+  assert.deepEqual(results.slice(4), [
     { path: 'docs/STATUS.md', status: 'created' },
     { path: 'docs/specs/.gitkeep', status: 'created' },
     { path: 'docs/archive/.gitkeep', status: 'created' },
@@ -169,7 +198,7 @@ test('R4: 다시 실행해도 docs와 AGENTS.md는 내용과 수정 시각이 �
 
   assert.deepEqual(snapshot(), before);
   assert.deepEqual(
-    results.slice(2).map((r) => r.status),
+    results.slice(4).map((r) => r.status),
     ['skipped', 'skipped', 'skipped', 'skipped'],
   );
 });

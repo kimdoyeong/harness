@@ -3,6 +3,8 @@ import path from 'node:path';
 import { AGENTS_MD, extractStatusTemplate } from './templates.ts';
 
 export const SKILL_DEST = '.claude/skills/ai-sdlc';
+export const CODEX_SKILL_DEST = '.agents/skills/ai-sdlc';
+export const SKILL_DESTS = [SKILL_DEST, CODEX_SKILL_DEST];
 
 export type Status = 'created' | 'updated' | 'unchanged' | 'skipped';
 
@@ -119,9 +121,9 @@ function write(realTargetDir: string, rel: string, data: string | Buffer): void 
   });
 }
 
-function syncSkill({ realTargetDir, skill, results }: Step & { skill: SourceFile[] }): void {
+function syncSkill({ realTargetDir, dest, skill, results }: Step & { dest: string; skill: SourceFile[] }): void {
   for (const { file, data: source } of skill) {
-    const rel = `${SKILL_DEST}/${file}`;
+    const rel = `${dest}/${file}`;
     const current = onTarget(rel, () => readIfExists(path.join(realTargetDir, rel)));
 
     if (current === null) {
@@ -164,7 +166,7 @@ export function init({ targetDir, skillSourceDir }: InitOptions): InitResult[] {
     : extractStatusTemplate(fs.readFileSync(path.join(skillSourceDir, 'templates.md'), 'utf8'));
 
   try {
-    syncSkill({ realTargetDir, skill, results });
+    for (const dest of SKILL_DESTS) syncSkill({ realTargetDir, dest, skill, results });
     createOnce({ realTargetDir, rel: 'docs/STATUS.md', data: () => statusMd ?? '', results });
     createDirOnce({ realTargetDir, rel: 'docs/specs', results });
     createDirOnce({ realTargetDir, rel: 'docs/archive', results });

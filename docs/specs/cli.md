@@ -21,6 +21,12 @@ Mockup: 없음. 화면이 없는 CLI라서 아래 "화면과 인터페이스"에
 - Node 최소 버전(우려 사항 5): `package.json`의 `engines`를 Node 22.18 이상으로 둔다.
 - 영역 이름: 이 spec의 `<spec_name>`은 `cli`다.
 
+2026-11-27 사용자 요청으로 더한 것.
+
+- 스킬을 Codex에서도 쓰도록 대상의 `.agents/skills/ai-sdlc/`에도 설치한다. 덮어쓰기 규칙은 `.claude/skills/ai-sdlc/`와 같다. 원본은 여전히 이 저장소의 `.claude/skills/ai-sdlc/` 하나다.
+- 생성되는 `AGENTS.md`에 "스킬" 절을 더해, 스킬을 만들거나 고칠 때 Claude Code용과 Codex용을 둘 다 두게 한다.
+- 이 저장소에도 `.agents/skills/ai-sdlc/`를 사본으로 두고, 두 폴더의 내용이 같은지 테스트로 확인한다(R12).
+
 2026-11-25 Build 중에 고친 것. 같은 날 사용자가 다시 승인했다.
 
 - 링크 명령을 `pnpm link --global`에서 `pnpm add --global link:<저장소 경로>`로 고쳤다. 이유: pnpm 12.21.0의 `pnpm link`에는 `--global` 옵션이 없다. 바꾼 명령은 실제로 실행해 `harness` 명령이 생기고, 원본 `SKILL.md`를 고친 뒤 다시 설치하지 않아도 `updated`로 반영되는 것을 확인했다.
@@ -42,7 +48,7 @@ Mockup: 없음. 화면이 없는 CLI라서 아래 "화면과 인터페이스"에
 
 | ID | 요구사항 | 확인 방법 |
 |---|---|---|
-| R1 | `harness init`은 대상의 `.claude/skills/ai-sdlc/`에 원본의 모든 파일을 같은 내용으로 만든다. `.DS_Store`는 복사하지 않는다. | 자동 테스트: 빈 임시 폴더에서 실행한 뒤 원본과 대상의 파일 목록과 해시가 같다. |
+| R1 | `harness init`은 대상의 `.claude/skills/ai-sdlc/`(Claude Code용)와 `.agents/skills/ai-sdlc/`(Codex용)에 원본의 모든 파일을 같은 내용으로 만든다. `.DS_Store`는 복사하지 않는다. | 자동 테스트: 빈 임시 폴더에서 실행한 뒤 원본과 대상 두 폴더의 파일 목록과 해시가 같다. |
 | R2 | `docs/STATUS.md`, `docs/specs/.gitkeep`, `docs/archive/.gitkeep`을 만든다. `docs/specs/`나 `docs/archive/`가 이미 있으면 그 폴더에는 아무것도 만들지 않는다. | 자동 테스트: 빈 폴더에서 세 파일이 생긴다. `docs/specs/a.md`가 있는 폴더에서는 `docs/specs/.gitkeep`이 생기지 않는다. |
 | R3 | `AGENTS.md`를 아래 "화면과 인터페이스"의 내용으로 만든다. | 자동 테스트: 생성된 파일이 기대 내용과 같다. |
 | R4 | 다시 실행하면 스킬 파일은 원본 내용이 되고, `docs/` 아래 파일과 `AGENTS.md`는 바뀌지 않는다. | 자동 테스트: 첫 실행 뒤 대상의 `SKILL.md`, `docs/STATUS.md`, `AGENTS.md`를 고치고 다시 실행한다. `SKILL.md`는 원본 해시로 돌아오고, 나머지 둘은 고친 내용과 수정 시각이 그대로다. |
@@ -52,6 +58,7 @@ Mockup: 없음. 화면이 없는 CLI라서 아래 "화면과 인터페이스"에
 | R8 | 대상이 이 저장소 자신이면 스킬 파일을 `unchanged`로 보고하고 내용을 망가뜨리지 않는다. | 자동 테스트: 원본과 대상이 같은 폴더인 상태로 실행한 뒤 스킬 파일 해시가 그대로다. |
 | R9 | `harness`, `harness --help`는 사용법을 출력하고 0으로 끝난다. 모르는 명령이나 옵션은 사용법을 stderr에 출력하고 1로 끝난다. 파일을 쓰지 못하면 경로와 이유를 stderr에 출력하고 1로 끝난다. | 자동 테스트: 각 경우의 출력과 종료 코드. 쓰기 실패는 읽기 전용 폴더로 확인한다. |
 | R10 | `README.md`에 처음 한 번 하는 링크 절차와 `harness init` 사용법, 다시 실행했을 때의 동작을 적는다. | 수동: `README.md`의 명령을 그대로 따라 해서 성공한다. |
+| R12 | 이 저장소의 `.agents/skills/ai-sdlc/`는 `.claude/skills/ai-sdlc/`와 내용이 같다. | 자동 테스트: 두 폴더의 파일 목록과 해시가 같다. |
 | R11 | intent의 성공 기준: 빈 프로젝트에서 한 번 실행한 뒤 그 폴더의 Claude Code에서 `/ai-sdlc`가 동작한다. | 수동: 임시 폴더에서 `harness init` 뒤 Claude Code를 열어 `/ai-sdlc`를 실행한다. |
 
 ## 화면과 인터페이스
@@ -71,12 +78,14 @@ harness init: /Users/me/some-project
 
   created    .claude/skills/ai-sdlc/SKILL.md
   created    .claude/skills/ai-sdlc/templates.md
+  created    .agents/skills/ai-sdlc/SKILL.md
+  created    .agents/skills/ai-sdlc/templates.md
   created    docs/STATUS.md
   created    docs/specs/.gitkeep
   created    docs/archive/.gitkeep
   created    AGENTS.md
 
-다음: AGENTS.md의 <TODO>에 실제 명령을 적고, Claude Code에서 /ai-sdlc 를 실행하세요.
+다음: AGENTS.md의 <TODO>에 실제 명령을 적고, Claude Code에서 /ai-sdlc, Codex에서 $ai-sdlc 를 실행하세요.
 $ echo $?
 0
 ```
@@ -88,6 +97,8 @@ harness init: /Users/me/some-project
 
   updated    .claude/skills/ai-sdlc/SKILL.md
   unchanged  .claude/skills/ai-sdlc/templates.md
+  updated    .agents/skills/ai-sdlc/SKILL.md
+  unchanged  .agents/skills/ai-sdlc/templates.md
   skipped    docs/STATUS.md (이미 있음)
   skipped    docs/specs/ (이미 있음)
   skipped    docs/archive/ (이미 있음)
@@ -102,6 +113,7 @@ $ harness --help
 사용법: harness init
 
   init    현재 폴더에 ai-sdlc 스킬, docs 뼈대, AGENTS.md를 만든다.
+          스킬은 Claude Code용 .claude/skills/와 Codex용 .agents/skills/에 함께 넣는다.
           스킬 파일은 항상 최신으로 덮어쓰고, 이미 있는 docs와 AGENTS.md는 건드리지 않는다.
 
 $ harness foo
@@ -118,6 +130,9 @@ $ echo $?
 ## 작업 방식
 새 기능과 변경은 ai-sdlc 스킬을 따른다.
 산출물은 docs/ 에 둔다.
+
+## 스킬
+스킬을 만들거나 고칠 때는 Claude Code용 `.claude/skills/<이름>/`과 Codex용 `.agents/skills/<이름>/`에 같은 내용으로 둘 다 둔다.
 
 ## 명령
 | 목적 | 명령 |

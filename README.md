@@ -4,7 +4,7 @@ AI 코딩 에이전트와 일할 때 쓰는 스킬 모음이다. 지금은 `ai-s
 
 ## ai-sdlc
 
-기능 하나를 Plan, Design, Build, Test, Deploy, Maintain 여섯 단계로 나눠 진행하게 하는 [Claude Code](https://claude.com/claude-code) 스킬이다. 각 단계는 산출물 하나를 커밋하면서 끝나고, 다음 단계는 그 산출물을 읽으면서 시작한다. 판단이 필요한 결정은 모두 사용자가 내린다.
+기능 하나를 Plan, Design, Build, Test, Deploy, Maintain 여섯 단계로 나눠 진행하게 하는 스킬이다. [Claude Code](https://claude.com/claude-code)와 Codex에서 쓴다. 각 단계는 산출물 하나를 커밋하면서 끝나고, 다음 단계는 그 산출물을 읽으면서 시작한다. 판단이 필요한 결정은 모두 사용자가 내린다.
 
 | 단계 | 남기는 것 | 사용자가 결정하는 것 |
 |---|---|---|
@@ -23,10 +23,11 @@ AI 코딩 에이전트와 일할 때 쓰는 스킬 모음이다. 지금은 `ai-s
 
 - [`.claude/skills/ai-sdlc/SKILL.md`](.claude/skills/ai-sdlc/SKILL.md): 단계별 절차와 공통 규칙
 - [`.claude/skills/ai-sdlc/templates.md`](.claude/skills/ai-sdlc/templates.md): `intent.md`, `spec.md`, `plan.md`, `STATUS.md` 양식
+- `.agents/skills/ai-sdlc/`: Codex가 읽는 사본. 위 두 파일과 내용이 같아야 하며 `pnpm test`가 확인한다. 스킬을 고치면 두 폴더를 함께 고친다.
 
 ### 사용
 
-Claude Code에서 `/ai-sdlc`를 입력하거나, 새 기능을 시작하거나 배포하려고 할 때 Claude가 스스로 읽는다. 처음에는 Plan 단계부터 시작해 브랜치를 만들고 사용자를 인터뷰한다.
+Claude Code에서는 `/ai-sdlc`, Codex에서는 `$ai-sdlc`를 입력하거나, 새 기능을 시작하거나 배포하려고 할 때 에이전트가 스스로 읽는다. 처음에는 Plan 단계부터 시작해 브랜치를 만들고 사용자를 인터뷰한다.
 
 ## harness CLI
 
@@ -61,19 +62,21 @@ harness init: /Users/me/some-project
 
   created    .claude/skills/ai-sdlc/SKILL.md
   created    .claude/skills/ai-sdlc/templates.md
+  created    .agents/skills/ai-sdlc/SKILL.md
+  created    .agents/skills/ai-sdlc/templates.md
   created    docs/STATUS.md
   created    docs/specs/.gitkeep
   created    docs/archive/.gitkeep
   created    AGENTS.md
 
-다음: AGENTS.md의 <TODO>에 실제 명령을 적고, Claude Code에서 /ai-sdlc 를 실행하세요.
+다음: AGENTS.md의 <TODO>에 실제 명령을 적고, Claude Code에서 /ai-sdlc, Codex에서 $ai-sdlc 를 실행하세요.
 ```
 
 다시 실행하면 스킬만 최신으로 맞춘다.
 
 | 대상 | 다시 실행했을 때 |
 |---|---|
-| `.claude/skills/ai-sdlc/`의 파일 중 저장소에 있는 것 | 저장소 내용으로 덮어쓴다. 대상에서 고친 내용은 묻지 않고 사라지며 `updated`로 표시된다. |
+| `.claude/skills/ai-sdlc/`와 `.agents/skills/ai-sdlc/`의 파일 중 저장소에 있는 것 | 저장소 내용으로 덮어쓴다. 대상에서 고친 내용은 묻지 않고 사라지며 `updated`로 표시된다. |
 | 스킬 폴더에 직접 더한 파일, 다른 스킬 폴더 | 건드리지 않는다. |
 | `docs/STATUS.md`, `AGENTS.md` | 이미 있으면 건드리지 않는다(`skipped`). |
 | `docs/specs/`, `docs/archive/` | 폴더가 이미 있으면 아무것도 만들지 않는다(`skipped`). |

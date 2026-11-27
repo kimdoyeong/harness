@@ -19,11 +19,12 @@ const USAGE_LINE = '사용법: harness init';
 const HELP = `${USAGE_LINE}
 
   init    현재 폴더에 ai-sdlc 스킬, docs 뼈대, AGENTS.md를 만든다.
+          스킬은 Claude Code용 .claude/skills/와 Codex용 .agents/skills/에 함께 넣는다.
           스킬 파일은 항상 최신으로 덮어쓰고, 이미 있는 docs와 AGENTS.md는 건드리지 않는다.
 `;
 
 const NEXT_STEP =
-  '다음: AGENTS.md의 <TODO>에 실제 명령을 적고, Claude Code에서 /ai-sdlc 를 실행하세요.';
+  '다음: AGENTS.md의 <TODO>에 실제 명령을 적고, Claude Code에서 /ai-sdlc, Codex에서 $ai-sdlc 를 실행하세요.';
 
 function report(targetDir: string, results: InitResult[]): string {
   const lines = [`harness init: ${targetDir}`, ''];
