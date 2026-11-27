@@ -11,6 +11,7 @@ const bin = path.join(repoRoot, 'bin/harness.ts');
 const HELP = `사용법: harness init
 
   init    현재 폴더에 ai-sdlc 스킬, docs 뼈대, AGENTS.md를 만든다.
+          스킬은 Claude Code용 .claude/skills/와 Codex용 .agents/skills/에 함께 넣는다.
           스킬 파일은 항상 최신으로 덮어쓰고, 이미 있는 docs와 AGENTS.md는 건드리지 않는다.
 `;
 
@@ -81,12 +82,14 @@ test('R5: 첫 실행과 두 번째 실행의 출력이 spec의 예시와 같다'
 
   created    .claude/skills/ai-sdlc/SKILL.md
   created    .claude/skills/ai-sdlc/templates.md
+  created    .agents/skills/ai-sdlc/SKILL.md
+  created    .agents/skills/ai-sdlc/templates.md
   created    docs/STATUS.md
   created    docs/specs/.gitkeep
   created    docs/archive/.gitkeep
   created    AGENTS.md
 
-다음: AGENTS.md의 <TODO>에 실제 명령을 적고, Claude Code에서 /ai-sdlc 를 실행하세요.
+다음: AGENTS.md의 <TODO>에 실제 명령을 적고, Claude Code에서 /ai-sdlc, Codex에서 $ai-sdlc 를 실행하세요.
 `,
   });
 
@@ -99,6 +102,8 @@ test('R5: 첫 실행과 두 번째 실행의 출력이 spec의 예시와 같다'
 
   updated    .claude/skills/ai-sdlc/SKILL.md
   unchanged  .claude/skills/ai-sdlc/templates.md
+  updated    .agents/skills/ai-sdlc/SKILL.md
+  unchanged  .agents/skills/ai-sdlc/templates.md
   skipped    docs/STATUS.md (이미 있음)
   skipped    docs/specs/ (이미 있음)
   skipped    docs/archive/ (이미 있음)

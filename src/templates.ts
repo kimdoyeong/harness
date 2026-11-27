@@ -4,6 +4,9 @@ export const AGENTS_MD = `# AGENTS.md
 새 기능과 변경은 ai-sdlc 스킬을 따른다.
 산출물은 docs/ 에 둔다.
 
+## 스킬
+스킬을 만들거나 고칠 때는 Claude Code용 \`.claude/skills/<이름>/\`과 Codex용 \`.agents/skills/<이름>/\`에 같은 내용으로 둘 다 둔다.
+
 ## 명령
 | 목적 | 명령 |
 |---|---|
